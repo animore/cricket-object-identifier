@@ -15,9 +15,12 @@ import joblib
 import cv2
 import numpy as np
 
-# feature_csv = generate_feature_csv("C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\transformed_sample_tagged_data.csv", "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\features_sample_tagged_data_min.csv", label_map)
+label_map = {"Bat": 0, "Ball": 1, "Stump": 2}
 
-feature_csv = 'C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\features_sample_tagged_data_min.csv'
+transform_csv("C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\shubham_tagged_data.csv", "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\transformed_shubham_tagged_data.csv", label_map)
+feature_csv = generate_feature_csv("C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\transformed_shubham_tagged_data.csv", "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\features_shubham_tagged_data.csv", label_map,"C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\processed_imagesSH\\processed_images")
+
+# feature_csv = 'C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\features_sample_tagged_data_min.csv'
 
 # 1) Load your features CSV
 # csv_path = "features_train.csv"   # change to your file
@@ -34,31 +37,31 @@ from sklearn.utils import resample
 
 # Assuming your data is in a DataFrame called 'df'
 # Separate majority and minority classes
-# df_majority = df[df.label == 3]
-# df_minority_bat = df[df.label == 0]
-# df_minority_ball = df[df.label == 1]
-# df_minority_stump = df[df.label == 2]
-#
-# # Upsample minority classes (example for Bat)
-# df_minority_bat_upsampled = resample(df_minority_bat,
-#                                      replace=True,  # sample with replacement
-#                                      n_samples=len(df_majority),  # to match majority class
-#                                      random_state=123)
-#
-# # Upsample minority classes (example for Ball)
-# df_minority_ball_upsampled = resample(df_minority_ball,
-#                                      replace=True,  # sample with replacement
-#                                      n_samples=len(df_majority),  # to match majority class
-#                                      random_state=123)
-#
-# # Upsample minority classes (example for Stump)
-# df_minority_stump_upsampled = resample(df_minority_stump,
-#                                      replace=True,  # sample with replacement
-#                                      n_samples=len(df_majority),  # to match majority class
-#                                      random_state=123)
-#
-# # Repeat for ball and stump, then combine everything back together
-# df = pd.concat([df_majority, df_minority_bat_upsampled,df_minority_ball_upsampled,df_minority_stump_upsampled])
+df_majority = df[df.label == 3]
+df_minority_bat = df[df.label == 0]
+df_minority_ball = df[df.label == 1]
+df_minority_stump = df[df.label == 2]
+
+# Upsample minority classes (example for Bat)
+df_minority_bat_upsampled = resample(df_minority_bat,
+                                     replace=True,  # sample with replacement
+                                     n_samples=len(df_majority),  # to match majority class
+                                     random_state=123)
+
+# Upsample minority classes (example for Ball)
+df_minority_ball_upsampled = resample(df_minority_ball,
+                                     replace=True,  # sample with replacement
+                                     n_samples=len(df_majority),  # to match majority class
+                                     random_state=123)
+
+# Upsample minority classes (example for Stump)
+df_minority_stump_upsampled = resample(df_minority_stump,
+                                     replace=True,  # sample with replacement
+                                     n_samples=len(df_majority),  # to match majority class
+                                     random_state=123)
+
+# Repeat for ball and stump, then combine everything back together
+df = pd.concat([df_majority, df_minority_bat_upsampled,df_minority_ball_upsampled,df_minority_stump_upsampled])
 
 X = df[feat_cols].values
 y = df["label"].values      # labels like "bat", "ball", "stump", "background"/"none"
@@ -353,11 +356,11 @@ def save_predictions_as_compact_csv(all_preds_df, output_csv_path, class_to_num_
 
 
 # 1. Run predictions
-folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\predicition_images_small"
+folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\shubham_images\\Processed_800x600RawSH\\Processed_800x600"
 preds_df, classes = predict_objects_in_folder(folder, prob_threshold=0.5)
 
 # 2. Generate compact CSV
-save_predictions_as_compact_csv(preds_df, "predictions_c01_c64.csv")
+save_predictions_as_compact_csv(preds_df, "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\model3\\predictions_c01_c64.csv")
 
 # 3. Annotate images (optional)
 annotate_folder(folder, "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\sample_images\\model3\\annotated_outputs", prob_threshold=0.5)
