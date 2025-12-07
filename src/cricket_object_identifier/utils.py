@@ -93,7 +93,7 @@ def process_image_to_cells(image_path, label_map, grid_size=8):
 
     return rows
 
-def generate_feature_csv(input_csv, output_csv, label_map):
+def generate_feature_csv(input_csv, output_csv, label_map,image_dir):
     # df = pd.read_csv(input_csv, header=None,
                      # names=["image_filename", "cell_number", "cell_row", "cell_col", "label"])
     df = pd.read_csv(input_csv, header=0)
@@ -101,9 +101,9 @@ def generate_feature_csv(input_csv, output_csv, label_map):
     final_rows = []
 
     for image_name in df["image_filename"].unique():
-        IMAGE_DIR = r"C:\Users\ASUS\PycharmProjects\cricket-object-identifier\resources\images\sample_images\processed_images"
+        # image_dir = r"C:\Users\ASUS\PycharmProjects\cricket-object-identifier\resources\images\sample_images\processed_images"
 
-        full_path = os.path.join(IMAGE_DIR, image_name)
+        full_path = os.path.join(image_dir, image_name)
 
         # full_path = os.path.join("path_to_images", image_name)
         cell_features = process_image_to_cells(full_path, label_map)
