@@ -66,39 +66,88 @@ def cricket_light_features_522(img):
 
     return feats
 
+# def cricket_light_features_2000(img):
+#     gray_full = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+#     # -------------------------------------------------------
+#     # 1. HOG tuned to produce ~1872 dims
+#     # -------------------------------------------------------
+#     hog_img = cv2.resize(gray_full, (112, 84))  # tuned size
+
+#     hog_feats = hog(
+#         hog_img,
+#         orientations=4,                    # reduced dimensions
+#         pixels_per_cell=(8, 8),
+#         cells_per_block=(2, 2),
+#         block_norm='L2-Hys',
+#         feature_vector=True
+#     )
+
+#     feats = list(hog_feats)
+
+#     # # -------------------------------------------------------
+#     # # 2. Color histograms (HSV + LAB) → 96 dims
+#     # # -------------------------------------------------------
+#     # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+#     # lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+#     #
+#     # for col_img in [hsv, lab]:
+#     #     for i in range(3):
+#     #         hist = cv2.calcHist([col_img], [i], None, [16], [0, 256])
+#     #         hist = cv2.normalize(hist, hist).flatten()
+#     #         feats.extend(hist)
+#     #
+#     # # -------------------------------------------------------
+#     # # 3. LBP uniform → 59 dims
+#     # # -------------------------------------------------------
+#     # lbp_img = cv2.resize(gray_full, (256, 256))
+#     # lbp = local_binary_pattern(lbp_img, P=8, R=1, method='uniform')
+#     # lbp_hist, _ = np.histogram(lbp.ravel(), bins=59, range=(0, 59), density=True)
+#     # feats.extend(lbp_hist)
+#     #
+#     # # -------------------------------------------------------
+#     # # 4. Hu Moments → 7 dims
+#     # # -------------------------------------------------------
+#     # _, th = cv2.threshold(gray_full, 0, 255, cv2.THRESH_OTSU)
+#     # moments = cv2.moments(th)
+#     # hu = cv2.HuMoments(moments).flatten()
+#     # feats.extend(np.log(np.abs(hu) + 1e-8))
+
+#     return feats
+
 def cricket_light_features_2000(img):
+    """Extract ~1872 features: HOG + Color Histograms + LBP + Hu Moments."""
     gray_full = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # -------------------------------------------------------
-    # 1. HOG tuned to produce ~1872 dims
+    # 1. HOG → ~90 dims
     # -------------------------------------------------------
-    hog_img = cv2.resize(gray_full, (112, 84))  # tuned size
-
+    hog_img = cv2.resize(gray_full, (112, 84))
     hog_feats = hog(
         hog_img,
-        orientations=4,                    # reduced dimensions
+        orientations=4,
         pixels_per_cell=(8, 8),
         cells_per_block=(2, 2),
         block_norm='L2-Hys',
         feature_vector=True
     )
-
     feats = list(hog_feats)
 
     # -------------------------------------------------------
-    # 2. Color histograms (HSV + LAB) → 96 dims
+    # 2. Color histograms (HSV + LAB + BGR) → ~288 dims (96 × 3)
     # -------------------------------------------------------
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    bgr = img
 
-    for col_img in [hsv, lab]:
+    for col_img in [hsv, lab, bgr]:
         for i in range(3):
-            hist = cv2.calcHist([col_img], [i], None, [16], [0, 256])
+            hist = cv2.calcHist([col_img], [i], None, [32], [0, 256])  # 32 bins per channel
             hist = cv2.normalize(hist, hist).flatten()
             feats.extend(hist)
 
     # -------------------------------------------------------
-    # 3. LBP uniform → 59 dims
+    # 3. LBP uniform → ~59 dims
     # -------------------------------------------------------
     lbp_img = cv2.resize(gray_full, (256, 256))
     lbp = local_binary_pattern(lbp_img, P=8, R=1, method='uniform')
@@ -106,13 +155,50 @@ def cricket_light_features_2000(img):
     feats.extend(lbp_hist)
 
     # -------------------------------------------------------
-    # 4. Hu Moments → 7 dims
+    # 4. GLCM Texture Features → 4 dims
+    # -------------------------------------------------------
+    glcm = graycomatrix(gray_full, distances=[1], angles=[0], levels=256, symmetric=True, normed=True)
+    for prop in ['contrast', 'homogeneity', 'energy', 'correlation']:
+        feats.append(graycoprops(glcm, prop)[0, 0])
+
+    # -------------------------------------------------------
+    # 5. Hu Moments (shape) → 7 dims
     # -------------------------------------------------------
     _, th = cv2.threshold(gray_full, 0, 255, cv2.THRESH_OTSU)
     moments = cv2.moments(th)
     hu = cv2.HuMoments(moments).flatten()
     feats.extend(np.log(np.abs(hu) + 1e-8))
 
+    # -------------------------------------------------------
+    # 6. Edge Statistics (Sobel) → ~20 dims
+    # -------------------------------------------------------
+    sobel_x = cv2.Sobel(gray_full, cv2.CV_64F, 1, 0)
+    sobel_y = cv2.Sobel(gray_full, cv2.CV_64F, 0, 1)
+    sobel = np.sqrt(sobel_x**2 + sobel_y**2)
+    feats.extend([
+        np.mean(sobel), np.std(sobel), np.min(sobel), np.max(sobel),
+        np.percentile(sobel, 25), np.percentile(sobel, 50), np.percentile(sobel, 75)
+    ])
+
+    # -------------------------------------------------------
+    # 7. Local Statistics (mean/std in regions) → ~1300+ dims
+    # -------------------------------------------------------
+    # Divide image into grid and compute stats
+    grid_h, grid_w = 16, 16  # 16×16 = 256 regions
+    region_h, region_w = gray_full.shape[0] // grid_h, gray_full.shape[1] // grid_w
+    
+    for i in range(grid_h):
+        for j in range(grid_w):
+            r1, r2 = i * region_h, (i + 1) * region_h
+            c1, c2 = j * region_w, (j + 1) * region_w
+            region = gray_full[r1:r2, c1:c2].astype(np.float32) / 255.0
+            
+            feats.extend([
+                np.mean(region), np.std(region), np.min(region), np.max(region),
+                np.var(region)
+            ])
+
+    print(f"✅ cricket_light_features_2000 generated {len(feats)} features")
     return feats
 
 def extract_features_135(cell_img):
@@ -169,7 +255,7 @@ def extract_features_135(cell_img):
 
     return feats
 
-def extract_features(cell):
+def extract_features_46(cell):
     features = []
 
     # Convert to grayscale
