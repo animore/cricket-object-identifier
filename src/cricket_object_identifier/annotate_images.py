@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 import pickle
 import pandas as pd
-from features_basic import cricket_light_features
+from features_basic import cricket_light_features,cricket_light_features_v3,cricket_light_features_p
+from utils_basic import combine_train_test_csvs
 
 # Inverse label map for displaying predictions
 INVERSE_LABEL_MAP = {0: "Bat", 1: "Ball", 2: "Stump", 3: "Background"}
@@ -91,7 +92,7 @@ def annotate_image(img, cell_info, predictions, thickness=2, font_scale=0.5):
     return annotated_img
 
 
-def predict_and_tag_images(test_folder, output_folder, model_path, feat_cols_path):
+def predict_and_tag_images(image_folder, output_folder, model_path, feat_cols_path,train_or_test,grid_size=8):
     """
     Process all images in the test folder, predict objects, annotate, and save to output folder.
 
@@ -104,16 +105,23 @@ def predict_and_tag_images(test_folder, output_folder, model_path, feat_cols_pat
     # Create output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
+    # One directory behind output_folder
+    parent_dir = os.path.dirname(os.path.abspath(output_folder))
+    output_csv_path = os.path.join(
+        parent_dir, f"{train_or_test.lower()}_predictions.csv"
+    )
+
     # Load model and features
     model, feat_cols = load_model_and_features(model_path, feat_cols_path)
 
     # Supported image extensions
     image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
+    csv_rows = []
 
     # Process each image in the test folder
-    for filename in os.listdir(test_folder):
+    for filename in os.listdir(image_folder):
         if filename.lower().endswith(image_extensions):
-            image_path = os.path.join(test_folder, filename)
+            image_path = os.path.join(image_folder, filename)
             try:
                 # Process image and extract features
                 img, cell_info, features = process_image_for_prediction(image_path)
@@ -121,21 +129,54 @@ def predict_and_tag_images(test_folder, output_folder, model_path, feat_cols_pat
                 # Predict
                 predictions = predict_objects(model, feat_cols, features)
 
+                # ---------- CSV ROW ----------
+                row = {
+                    "ImageFileName": filename,
+                    "TrainOrTest": train_or_test
+                }
+
+                for i, pred in enumerate(predictions):
+                    row[f"c{i + 1:02d}"] = int(pred)
+
+                csv_rows.append(row)
+
                 # Annotate
                 annotated_img = annotate_image(img, cell_info, predictions)
 
                 # Save annotated image
-                output_path = os.path.join(output_folder, f"annotated_{filename}")
+                # output_path = os.path.join(output_folder, f"annotated_{filename}")
+                output_path = os.path.join(output_folder, filename)
                 cv2.imwrite(output_path, annotated_img)
                 print(f"Processed and saved: {output_path}")
             except Exception as e:
                 print(f"Error processing {filename}: {str(e)}")
 
+    # ---------- WRITE CSV ----------
+    columns = (
+                ["ImageFileName", "TrainOrTest"] +
+                [f"c{i:02d}" for i in range(1, grid_size * grid_size + 1)]
+    )
+
+    df = pd.DataFrame(csv_rows, columns=columns)
+    df.to_csv(output_csv_path, index=False)
+
+    print(f"CSV written: {output_csv_path}")
+
+    return output_csv_path
+
+
+
+
+
 # Example usage (replace with your paths)
 if __name__ == "__main__":
-    test_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\predicition_images"
-    output_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\annotated_outputs"
-    model_path = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\cricket_objects\\stump\\cricket_cell_model_stump.pkl"
-    feat_cols_path = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\cricket_objects\\stump\\feature_columns_stump.pkl"
-#
-    predict_and_tag_images(test_folder, output_folder, model_path, feat_cols_path)
+    train_image_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\train_images"
+    test_image_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\test_images"
+    train_output_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\train_output_folder"
+    test_output_folder = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\test_output_folder"
+    model_path = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\cricket_cell_model_final_combined.pkl"
+    feat_cols_path = "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\feature_columns_final_combined.pkl"
+
+    train_csv_path = predict_and_tag_images(train_image_folder, train_output_folder, model_path, feat_cols_path,"Train")
+    test_csv_path = predict_and_tag_images(test_image_folder, test_output_folder, model_path, feat_cols_path, "Test")
+    combine_train_test_csvs(train_csv_path,test_csv_path)
