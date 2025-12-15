@@ -7,7 +7,7 @@ from features_basic import *
 import pandas as pd
 import os
 
-label_map = {"Bat": 0, "Ball": 1, "Stump": 2}
+label_map = {"Bat": 1, "Ball": 2, "Stump": 3}
 
 def transform_csv(input_path, output_path):
     df = pd.read_csv(input_path)  # assumes CSV has header
@@ -142,7 +142,7 @@ def generate_metadata_csv(input_csv, output_csv, image_dir, grid_size=8):
     df = pd.read_csv(input_csv)
 
     final_rows = []
-    background_id = 3  # no object
+    background_id = 0  # no object
 
     for image_name in df["image_filename"].unique():
         full_path = os.path.join(image_dir, image_name)

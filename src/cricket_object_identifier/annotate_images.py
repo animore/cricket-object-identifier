@@ -3,18 +3,18 @@ import cv2
 import numpy as np
 import pickle
 import pandas as pd
-from features_basic import cricket_light_features,cricket_light_features_v3,cricket_light_features_p
+from features_basic import cricket_light_features
 from utils_basic import combine_train_test_csvs
 
 # Inverse label map for displaying predictions
-INVERSE_LABEL_MAP = {0: "Bat", 1: "Ball", 2: "Stump", 3: "Background"}
+INVERSE_LABEL_MAP = {0: "Background", 1: "Bat", 2: "Ball", 3: "Stump"}
 
 # Colors for different labels (BGR format for OpenCV)
 LABEL_COLORS = {
-    0: (0, 255, 0),  # Green for Bat
-    1: (0, 0, 255),  # Red for Ball
-    2: (255, 0, 0),  # Blue for Stump
-    3: (255, 255, 255)  # White for Background (not used)
+    0: (255, 255, 255),  # White for Background (not used)
+    1: (0, 255, 0),  # Green for Bat
+    2: (0, 0, 255),  # Red for Ball
+    3: (255, 0, 0)  # Blue for Stump
 }
 
 
@@ -77,7 +77,7 @@ def annotate_image(img, cell_info, predictions, thickness=2, font_scale=0.5):
     """
     annotated_img = img.copy()
     for (cell_number, r, c, (x1, y1, x2, y2)), pred in zip(cell_info, predictions):
-        if pred != 3:  # Skip background
+        if pred != 0:  # Skip background
             label_name = INVERSE_LABEL_MAP.get(pred, "Unknown")
             color = LABEL_COLORS.get(pred, (0, 255, 255))  # Default to yellow if unknown
 
@@ -94,10 +94,10 @@ def annotate_image(img, cell_info, predictions, thickness=2, font_scale=0.5):
 
 def predict_and_tag_images(image_folder, output_folder, model_path, feat_cols_path,train_or_test,grid_size=8):
     """
-    Process all images in the test folder, predict objects, annotate, and save to output folder.
+    Process all images in the image folder, predict objects, annotate, and save to output folder.
 
     Args:
-    - test_folder (str): Path to the folder containing test images.
+    - image_folder (str): Path to the folder containing test images.
     - output_folder (str): Path to save annotated images.
     - model_path (str): Path to the pickled model file.
     - feat_cols_path (str): Path to the pickled feature columns file.
@@ -163,10 +163,6 @@ def predict_and_tag_images(image_folder, output_folder, model_path, feat_cols_pa
     print(f"CSV written: {output_csv_path}")
 
     return output_csv_path
-
-
-
-
 
 # Example usage (replace with your paths)
 if __name__ == "__main__":
