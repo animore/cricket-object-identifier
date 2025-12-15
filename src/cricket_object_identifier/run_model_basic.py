@@ -4,25 +4,18 @@ import os
 import shutil
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, f1_score, recall_score, roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-from sklearn.svm import SVR
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler
-from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neural_network import MLPClassifier
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.feature_selection import SelectKBest, f_classif
+
 
 def build_models() -> dict:
     models = {}
     models["RandomForest"] = Pipeline([
-        # ("scaler", StandardScaler()),
         ("clf", RandomForestClassifier(
             n_estimators=300,
             max_depth=None,
@@ -31,31 +24,10 @@ def build_models() -> dict:
             random_state=42,
         )),
     ])
-    # models["SVM_RBF"] = Pipeline([
-    #     ("scaler", StandardScaler()),
-    #     ("clf", SVC(kernel='rbf', C=2.0, gamma='scale', class_weight='balanced', random_state=42)),
-    # ])
     models["kNN"] = Pipeline([
-        # ("scaler", StandardScaler()),
-        ("clf", KNeighborsClassifier(n_neighbors=7, weights='distance', n_jobs=None)),
+        ("clf", KNeighborsClassifier(n_neighbors=4, weights='distance', n_jobs=None)),
     ])
-    # models["MLP"] = Pipeline([
-    #     ("scaler", StandardScaler()),
-    #     ("clf", MLPClassifier(hidden_layer_sizes=(256,128), activation='relu', alpha=1e-4, batch_size='auto',
-    #                            learning_rate='adaptive', max_iter=300, random_state=42, early_stopping=True)),
-    # ])
-    # models["XGBoost"] = XGBClassifier(
-    #         n_estimators=400,
-    #         max_depth=6,
-    #         learning_rate=0.05,
-    #         subsample=0.8,
-    #         colsample_bytree=0.8,
-    #         reg_lambda=1.0,
-    #         objective='multi:softprob',
-    #         num_class=len(set(y)),
-    #         tree_method='hist',
-    #         random_state=42,
-    #     )
+
     return models
 
 
@@ -240,13 +212,14 @@ def split_train_test_images(features_df, image_dir):
 #     "C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\transformed_tagged_data.csv",
 # )
 
-#Used for generating metadata file by adding data for background since image tagging utility only adds values for bat,ball,stump
+
+#Uncomment and run for generating metadata file by adding data for background since image tagging utility only adds values for bat,ball,stump
 # generate_metadata_csv(
 #     input_csv="C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\transformed_tagged_data.csv",
 #     output_csv="C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\features_final_combinedAll_tagged_data.csv",
 #     image_dir="C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\all_images"
 # )
-#
+
 
 #Add features by using HOG
 feature_csv = add_features_from_csv(
@@ -288,6 +261,7 @@ print(f"Best model: {best_name} (acc={results[best_name]['accuracy']:.3f})")
 # best_name = max(results.keys(), key=lambda n: results[n]["macro_recall"])
 # best_model = results[best_name]["model"]
 # print(f"Best model: {best_name} (macro_recall={results[best_name]['macro_recall']:.3f})")
+
 
 #Combined final pickle
 with open("C:\\Users\\ASUS\\PycharmProjects\\cricket-object-identifier\\resources\\images\\final_combined\\cricket_cell_model_final_combined.pkl", "wb") as f:
