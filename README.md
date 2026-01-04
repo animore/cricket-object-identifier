@@ -39,12 +39,14 @@ For an image:
 
 ## How to Run the Program
 
-1. **Train the Model:**
+1. **Tag Images Manually:**
+	- Use `image_classificaton.ipynb` to manually tag images before training. This notebook allows you to assign labels to each image for bat, ball, stump, or no object.
+
+2. **Train the Model:**
 	- Execute `run_model_basic.py` to train the model. This script will generate a pickle file for the trained model and another pickle file for the feature columns.
 
-2. **Annotate Images:**
+3. **Annotate Images:**
 	- Use the generated model and feature columns pickle files as input to `annotate_images.py`.
 	- Run `annotate_images.py` to annotate images using the trained model.
 
----
 
